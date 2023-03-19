@@ -25,7 +25,7 @@ pico_sdk_init()
 include("PicoLed/PicoLed.cmake")
 
 # rest of your project
-add_executable(SensorGauge low_power.c i2c.c SensorGauge.cpp)
+add_executable(SensorGauge wind.c utils.c low_power.c i2c.c SensorGauge.cpp)
 
 pico_set_program_name(SensorGauge "SensorGauge")
 pico_set_program_version(SensorGauge "0.1")
@@ -34,7 +34,7 @@ pico_enable_stdio_usb(SensorGauge 0)
 pico_enable_stdio_uart(SensorGauge 0)
 
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(SensorGauge pico_stdlib pico_runtime pico_i2c_slave hardware_sleep hardware_rtc PicoLed)
+target_link_libraries(SensorGauge pico_stdlib pico_runtime pico_i2c_slave hardware_rosc hardware_rtc PicoLed)
 
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(SensorGauge)
