@@ -19,13 +19,13 @@ static struct
 
 static struct
 {
-  uint8_t mem[4];
+  uint8_t mem[sizeof(float)];
   uint8_t address;
 } wind_speed_ctx;
 
 static void read_windspeed_into_i2c_mem()
 {
-  float2Bytes(wind_speed, &wind_speed_ctx.mem[0]);
+  float_to_bytes(wind_speed, wind_speed_ctx.mem);
   wind_speed_ctx.address = 0;
 }
 

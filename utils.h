@@ -8,7 +8,7 @@ extern "C"
 {
 #endif
 
-  extern void float2Bytes(float val, uint8_t *bytes_array);
+  extern void float_to_bytes(float val, uint8_t bytes_array[sizeof(float)]);
 
 #ifdef __cplusplus
 }
