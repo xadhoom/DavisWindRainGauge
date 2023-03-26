@@ -3,6 +3,7 @@
 #include <hardware/rtc.h>
 #include <pico/stdlib.h>
 #include <pico/critical_section.h>
+#include <pico/multicore.h>
 #include <PicoLed.hpp>
 #include "low_power.h"
 #include "i2c.h"
@@ -153,6 +154,12 @@ static void init_adc_inputs()
   adc_gpio_init(WIND_DIRECTION_PIN);
 }
 
+void core1_entry()
+{
+  //  init i2c slave interface
+  start_i2c_slave(I2C_SLAVE_ADDRESS, I2C_SLAVE_SDA_PIN, I2C_SLAVE_SCL_PIN);
+}
+
 int main()
 {
   int32_t prev_bucket_irq, prev_wind_pulses = 0;
@@ -162,8 +169,9 @@ int main()
   // Re init uart now that clk_peri has changed
   stdio_init_all();
 
-  // init i2c slave interface
-  start_i2c_slave(I2C_SLAVE_ADDRESS, I2C_SLAVE_SDA_PIN, I2C_SLAVE_SCL_PIN);
+  // Start i2c over core 1
+  // see: https://github.com/raspberrypi/pico-sdk/issues/1102
+  multicore_launch_core1(core1_entry);
 
   auto ledStrip = PicoLed::addLeds<PicoLed::WS2812B>(pio0, 0, LED_PIN, LED_LENGTH, PicoLed::FORMAT_GRB);
   signal_startup_with_leds(ledStrip);
