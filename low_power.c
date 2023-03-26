@@ -26,7 +26,7 @@ extern void set_low_power()
                   0, // No GLMUX
                   CLOCKS_CLK_ADC_CTRL_AUXSRC_VALUE_CLKSRC_PLL_USB,
                   48 * MHZ,
-                  48 * MHZ);
+                  12 * MHZ);
 
   // CLK peri is clocked from clk_sys so need to change clk_peri's freq
   clock_configure(clk_peri,

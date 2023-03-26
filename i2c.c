@@ -23,10 +23,22 @@ static struct
   uint8_t address;
 } wind_speed_ctx;
 
+static struct
+{
+  uint8_t mem[sizeof(int32_t)];
+  uint8_t address;
+} wind_direction_ctx;
+
 static void read_windspeed_into_i2c_mem()
 {
   float_to_bytes(wind_speed, wind_speed_ctx.mem);
   wind_speed_ctx.address = 0;
+}
+
+static void read_winddirection_into_i2c_mem()
+{
+  int32_to_bytes(wind_direction, wind_direction_ctx.mem);
+  wind_direction_ctx.address = 0;
 }
 
 static void write_i2c_mem_into_rtc()
@@ -95,6 +107,10 @@ static void start_i2c_command(i2c_inst_t *i2c)
     i2c_state = I2C_STATE_READ_WIND_SPEED_CMD;
     read_windspeed_into_i2c_mem();
     break;
+  case I2C_COMMAND_READ_WIND_DIRECTION:
+    i2c_state = I2C_STATE_READ_WIND_DIRECTION_CMD;
+    read_winddirection_into_i2c_mem();
+    break;
   default:
     break;
   }
@@ -115,6 +131,10 @@ static void i2c_command_continuation(i2c_inst_t *i2c)
   case I2C_STATE_READ_WIND_SPEED:
     i2c_write_byte_raw(i2c, wind_speed_ctx.mem[wind_speed_ctx.address]);
     wind_speed_ctx.address++;
+    break;
+  case I2C_STATE_READ_WIND_DIRECTION:
+    i2c_write_byte_raw(i2c, wind_direction_ctx.mem[wind_direction_ctx.address]);
+    wind_direction_ctx.address++;
     break;
   default:
     break;
@@ -143,6 +163,14 @@ static void i2c_handle_finish(i2c_inst_t *i2c)
   case I2C_STATE_READ_WIND_SPEED_CMD:
     i2c_state = I2C_STATE_READ_WIND_SPEED;
     wind_speed_ctx.address = 0;
+    return;
+    break;
+  case I2C_STATE_READ_WIND_DIRECTION:
+    wind_direction_ctx.address = 0;
+    break;
+  case I2C_STATE_READ_WIND_DIRECTION_CMD:
+    i2c_state = I2C_STATE_READ_WIND_DIRECTION;
+    wind_direction_ctx.address = 0;
     return;
     break;
   default:

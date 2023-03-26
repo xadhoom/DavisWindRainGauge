@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <hardware/adc.h>
 #include <hardware/rtc.h>
 #include <pico/stdlib.h>
 #include <pico/critical_section.h>
@@ -11,16 +12,18 @@
 #define I2C_SLAVE_SDA_PIN 0
 #define I2C_SLAVE_SCL_PIN 1
 
-#define AWAKE_PIN 11
-
 #define LED_PIN 16
 #define LED_LENGTH 1
 
 #define BUCKET_PIN 14
 #define BUCKET_IRQ_MASK GPIO_IRQ_EDGE_FALL
+// #define BUCKET_PIN_PULL_UP
 
 #define WIND_PIN 15
+#define WIND_DIRECTION_PIN 29      // this is an analog input
+#define WIND_DIRECTION_ADC_INPUT 3 // this is an analog input
 #define WIND_IRQ_MASK GPIO_IRQ_EDGE_FALL
+// #define WIND_PIN_PULL_UP
 
 int32_t bucket_irq = 0;
 uint64_t bucket_last_ts_usec = 0;
@@ -71,13 +74,15 @@ void gpio_callback(uint gpio, uint32_t events)
 
 static void init_gpios(void)
 {
-  gpio_init(AWAKE_PIN);
   gpio_init(BUCKET_PIN);
   gpio_init(WIND_PIN);
 
-  gpio_pull_up(AWAKE_PIN);
+#ifdef BUCKET_PIN_PULL_UP
   gpio_pull_up(BUCKET_PIN);
+#endif
+#ifdef WIND_PIN_PULL_UP
   gpio_pull_up(WIND_PIN);
+#endif
 
   gpio_set_irq_enabled(BUCKET_PIN, BUCKET_IRQ_MASK, true);
   gpio_set_irq_enabled(WIND_PIN, WIND_IRQ_MASK, true);
@@ -142,8 +147,16 @@ static void setup_rtc()
   rtc_set_datetime(&t);
 }
 
+static void init_adc_inputs()
+{
+  adc_init();
+  adc_gpio_init(WIND_DIRECTION_PIN);
+}
+
 int main()
 {
+  int32_t prev_bucket_irq, prev_wind_pulses = 0;
+
   set_low_power();
 
   // Re init uart now that clk_peri has changed
@@ -162,11 +175,17 @@ int main()
   /* init gpios */
   init_gpios();
 
+  /* init adc */
+  init_adc_inputs();
+
+  /* enable onboard temp adc input*/
+  adc_set_temp_sensor_enabled(true);
+
   // Start the Real time clock
   setup_rtc();
 
   /* init wind stuff */
-  if (!wind_init())
+  if (!wind_init(WIND_DIRECTION_ADC_INPUT))
   {
     blink_led(ledStrip, PicoLed::RGB(255, 0, 0), 25);
   }
@@ -175,10 +194,12 @@ int main()
 
   while (true)
   {
-    if (bucket_irq || wind_pulses)
+    if ((bucket_irq > prev_bucket_irq) || (wind_pulses > prev_wind_pulses))
     {
       blink_led(ledStrip, PicoLed::RGB(0, 255, 255), 25);
     }
+    prev_bucket_irq = bucket_irq;
+    prev_wind_pulses = wind_pulses;
 
     if (rtc_alarm)
     {

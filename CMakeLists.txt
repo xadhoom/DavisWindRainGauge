@@ -44,7 +44,8 @@ pico_enable_stdio_usb(DavisWindRainGauge 0)
 pico_enable_stdio_uart(DavisWindRainGauge 0)
 
 # Add pico_stdlib library which aggregates commonly used features
-target_link_libraries(DavisWindRainGauge pico_stdlib pico_runtime pico_i2c_slave hardware_rosc hardware_rtc PicoLed)
+target_link_libraries(DavisWindRainGauge pico_stdlib pico_runtime pico_i2c_slave
+  hardware_rosc hardware_rtc hardware_adc PicoLed)
 
 # create map/bin/hex/uf2 file in addition to ELF.
 pico_add_extra_outputs(DavisWindRainGauge)
