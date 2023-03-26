@@ -20,3 +20,15 @@ perform I2C exchanges and send back to sleep... too complicated, that's why I ch
 ## Notes
 Please note that I'm neither a C/C++ dev nor an embedded developer, just playing around.
 
+## Sources, external links, etc
+[Davis anemometer on arduino](http://cactus.io/hookups/weather/anemometer/davis/hookup-arduino-to-davis-anemometer) Davis wind sensor schematics, example arduino code
+
+[RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
+
+[Pico SDK docs](https://www.raspberrypi.com/documentation/pico-sdk)
+
+[Pico Examples](https://github.com/raspberrypi/pico-examples) Examples for several things, including I2C slave, sleep, etc
+
+[Pico Extras](https://github.com/raspberrypi/pico-extras) Libs not yet in SDK, like sleep, clocks stuff, etc
+
+[Davis derived variables application note](https://support.davisinstruments.com/article/igpcv664kz-app-notes-derived-variables-in-davis-weather-products) Several derived variables, including how they calculate rain rate
