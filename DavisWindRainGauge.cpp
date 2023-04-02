@@ -16,6 +16,8 @@
 #define LED_PIN 16
 #define LED_LENGTH 1
 
+#define HB_BLINK_INTVL_SEC 5
+
 #define BUCKET_PIN 14
 #define BUCKET_IRQ_MASK GPIO_IRQ_EDGE_FALL
 // #define BUCKET_PIN_PULL_UP
@@ -35,6 +37,12 @@ bool rtc_alarm = false;
 /* Critical sections */
 static critical_section_t rtc_crit_sec;
 static critical_section_t bucket_crit_sec;
+
+/* timers */
+struct repeating_timer hb_blink_timer;
+
+/* */
+static bool hb_blink = false;
 
 static void shutdown_leds(PicoLed::PicoLedController ledStrip)
 {
@@ -108,17 +116,8 @@ static void rtc_alarm_callback(void)
   critical_section_exit(&rtc_crit_sec);
 }
 
-static void schedule_blink()
+static void schedule_rtc_every_1_minute()
 {
-  datetime_t now = {0};
-  rtc_get_datetime(&now);
-
-  int8_t sec = now.sec + 5;
-  if (sec >= 60)
-  {
-    sec = sec - 60;
-  }
-
   datetime_t alarm = {
       .year = -1,
       .month = -1,
@@ -126,7 +125,7 @@ static void schedule_blink()
       .dotw = -1, // 0 is Sunday, so 3 is Wednesday
       .hour = -1,
       .min = -1,
-      .sec = sec};
+      .sec = 0};
 
   rtc_set_alarm(&alarm, &rtc_alarm_callback);
 }
@@ -152,6 +151,23 @@ static void init_adc_inputs()
 {
   adc_init();
   adc_gpio_init(WIND_DIRECTION_PIN);
+}
+
+static bool hb_timer_callback(struct repeating_timer *t)
+{
+  hb_blink = true;
+
+  return true;
+}
+
+static void schedule_blink_hb(PicoLed::PicoLedController ledStrip)
+{
+  bool res = add_repeating_timer_ms(-(HB_BLINK_INTVL_SEC * 1000), hb_timer_callback, NULL, &hb_blink_timer);
+
+  if (!res)
+  {
+    blink_led(ledStrip, PicoLed::RGB(0, 0, 255), 25);
+  }
 }
 
 void core1_entry()
@@ -198,7 +214,9 @@ int main()
     blink_led(ledStrip, PicoLed::RGB(255, 0, 0), 25);
   }
 
-  schedule_blink();
+  schedule_rtc_every_1_minute();
+
+  schedule_blink_hb(ledStrip);
 
   while (true)
   {
@@ -209,13 +227,10 @@ int main()
     prev_bucket_irq = bucket_irq;
     prev_wind_pulses = wind_pulses;
 
-    if (rtc_alarm)
+    if (hb_blink)
     {
-      critical_section_enter_blocking(&rtc_crit_sec);
-      rtc_alarm = false;
-      critical_section_exit(&rtc_crit_sec);
+      hb_blink = false;
       blink_led(ledStrip, PicoLed::RGB(255, 255, 0), 25);
-      schedule_blink();
     }
 
     __wfi();
