@@ -78,8 +78,11 @@ extern bool wind_init(uint8_t adc_input_nr)
 
   wind_adc_input_nr = adc_input_nr;
 
-  bool t1_res = add_repeating_timer_ms(WIND_SAMPLER_SECS * 1000, windspeed_timer_callback, NULL, &wind_speed_timer);
-  bool t2_res = add_repeating_timer_ms(WIND_DIR_SAMPLER_SECS * 1000, winddirection_timer_callback, NULL, &wind_direction_timer);
+  /* using negative times here to start the timer on start of the callbacks
+   * and not between the end of one callback to the other.
+   */
+  bool t1_res = add_repeating_timer_ms(-(WIND_SAMPLER_SECS * 1000), windspeed_timer_callback, NULL, &wind_speed_timer);
+  bool t2_res = add_repeating_timer_ms(-(WIND_DIR_SAMPLER_SECS * 1000), winddirection_timer_callback, NULL, &wind_direction_timer);
 
   if (t1_res && t2_res)
   {
