@@ -35,7 +35,7 @@ project(DavisWindRainGauge C CXX ASM)
 include("PicoLed/PicoLed.cmake")
 
 # rest of your project
-add_executable(DavisWindRainGauge wind.c utils.c low_power.c i2c.c DavisWindRainGauge.cpp)
+add_executable(DavisWindRainGauge rain.c wind.c utils.c low_power.c i2c.c DavisWindRainGauge.cpp)
 
 pico_set_program_name(DavisWindRainGauge "DavisWindRainGauge")
 pico_set_program_version(DavisWindRainGauge "0.1")

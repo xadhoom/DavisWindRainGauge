@@ -8,6 +8,7 @@
 #include "low_power.h"
 #include "i2c.h"
 #include "wind.h"
+#include "rain.h"
 
 #define I2C_SLAVE_ADDRESS 0x17
 #define I2C_SLAVE_SDA_PIN 0
@@ -28,15 +29,10 @@
 #define WIND_IRQ_MASK GPIO_IRQ_EDGE_FALL
 // #define WIND_PIN_PULL_UP
 
-int32_t bucket_irq = 0;
-uint64_t bucket_last_ts_usec = 0;
-uint64_t bucket_bounce_delta_usec = 100 * 1000;
-
 bool rtc_alarm = false;
 
 /* Critical sections */
 static critical_section_t rtc_crit_sec;
-static critical_section_t bucket_crit_sec;
 
 /* timers */
 struct repeating_timer hb_blink_timer;
@@ -63,17 +59,9 @@ static void blink_led(PicoLed::PicoLedController ledStrip, PicoLed::Color color,
 
 void gpio_callback(uint gpio, uint32_t events)
 {
-  uint64_t now = time_us_64();
   if ((gpio == BUCKET_PIN) && (events & BUCKET_IRQ_MASK))
   {
-
-    if ((now - bucket_last_ts_usec) >= bucket_bounce_delta_usec)
-    {
-      bucket_last_ts_usec = now;
-      critical_section_enter_blocking(&bucket_crit_sec);
-      bucket_irq++;
-      critical_section_exit(&bucket_crit_sec);
-    }
+    rain_gauge_tick();
   }
   else if ((gpio == WIND_PIN) && (events & WIND_IRQ_MASK))
   {
@@ -114,6 +102,8 @@ static void rtc_alarm_callback(void)
   critical_section_enter_blocking(&rtc_crit_sec);
   rtc_alarm = true;
   critical_section_exit(&rtc_crit_sec);
+
+  rain_rtc_timer_cb();
 }
 
 static void schedule_rtc_every_1_minute()
@@ -178,7 +168,7 @@ void core1_entry()
 
 int main()
 {
-  int32_t prev_bucket_irq, prev_wind_pulses = 0;
+  int32_t prev_rain_pulses, prev_wind_pulses = 0;
 
   set_low_power();
 
@@ -194,7 +184,6 @@ int main()
 
   /* Critical sections */
   critical_section_init(&rtc_crit_sec);
-  critical_section_init(&bucket_crit_sec);
 
   /* init gpios */
   init_gpios();
@@ -220,11 +209,11 @@ int main()
 
   while (true)
   {
-    if ((bucket_irq > prev_bucket_irq) || (wind_pulses > prev_wind_pulses))
+    if ((rain_get_pulses() > prev_rain_pulses) || (wind_pulses > prev_wind_pulses))
     {
       blink_led(ledStrip, PicoLed::RGB(0, 255, 255), 25);
     }
-    prev_bucket_irq = bucket_irq;
+    prev_rain_pulses = rain_get_pulses();
     prev_wind_pulses = wind_pulses;
 
     if (hb_blink)

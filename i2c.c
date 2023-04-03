@@ -4,6 +4,7 @@
 #include <pico/i2c_slave.h>
 #include "i2c.h"
 #include "wind.h"
+#include "rain.h"
 #include "utils.h"
 
 static uint8_t i2c_state = I2C_STATE_IDLE;
@@ -29,6 +30,18 @@ static struct
   uint8_t address;
 } wind_direction_ctx;
 
+static struct
+{
+  uint8_t mem[sizeof(float)];
+  uint8_t address;
+} rain_rate_ctx;
+
+static struct
+{
+  uint8_t mem[sizeof(float)];
+  uint8_t address;
+} rain_daily_ctx;
+
 static void read_windspeed_into_i2c_mem()
 {
   float_to_bytes(wind_speed, wind_speed_ctx.mem);
@@ -39,6 +52,16 @@ static void read_winddirection_into_i2c_mem()
 {
   int32_to_bytes(wind_direction, wind_direction_ctx.mem);
   wind_direction_ctx.address = 0;
+}
+
+static void read_rain_rate_into_i2c_mem()
+{
+  float_to_bytes(rain_get_rate(), rain_rate_ctx.mem);
+}
+
+static void read_rain_daily_into_i2c_mem()
+{
+  float_to_bytes(rain_get_daily(), rain_daily_ctx.mem);
 }
 
 static void write_i2c_mem_into_rtc()
@@ -111,6 +134,14 @@ static void start_i2c_command(i2c_inst_t *i2c)
     i2c_state = I2C_STATE_READ_WIND_DIRECTION_CMD;
     read_winddirection_into_i2c_mem();
     break;
+  case I2C_COMMAND_READ_RAIN_RATE:
+    i2c_state = I2C_STATE_READ_RAIN_RATE_CMD;
+    read_rain_rate_into_i2c_mem();
+    break;
+  case I2C_COMMAND_READ_RAIN_DAILY:
+    i2c_state = I2C_STATE_READ_RAIN_DAILY_CMD;
+    read_rain_daily_into_i2c_mem();
+    break;
   default:
     break;
   }
@@ -135,6 +166,14 @@ static void i2c_command_continuation(i2c_inst_t *i2c)
   case I2C_STATE_READ_WIND_DIRECTION:
     i2c_write_byte_raw(i2c, wind_direction_ctx.mem[wind_direction_ctx.address]);
     wind_direction_ctx.address++;
+    break;
+  case I2C_STATE_READ_RAIN_RATE:
+    i2c_write_byte_raw(i2c, rain_rate_ctx.mem[rain_rate_ctx.address]);
+    rain_rate_ctx.address++;
+    break;
+  case I2C_STATE_READ_RAIN_DAILY:
+    i2c_write_byte_raw(i2c, rain_daily_ctx.mem[rain_daily_ctx.address]);
+    rain_daily_ctx.address++;
     break;
   default:
     break;
@@ -172,6 +211,22 @@ static void i2c_handle_finish(i2c_inst_t *i2c)
     i2c_state = I2C_STATE_READ_WIND_DIRECTION;
     wind_direction_ctx.address = 0;
     return;
+    break;
+  case I2C_STATE_READ_RAIN_RATE_CMD:
+    i2c_state = I2C_STATE_READ_RAIN_RATE;
+    rain_rate_ctx.address = 0;
+    return;
+    break;
+  case I2C_STATE_READ_RAIN_RATE:
+    rain_rate_ctx.address = 0;
+    break;
+  case I2C_STATE_READ_RAIN_DAILY_CMD:
+    i2c_state = I2C_STATE_READ_RAIN_DAILY;
+    rain_daily_ctx.address = 0;
+    return;
+    break;
+  case I2C_STATE_READ_RAIN_DAILY:
+    rain_daily_ctx.address = 0;
     break;
   default:
     break;
