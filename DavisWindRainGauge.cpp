@@ -29,11 +29,6 @@
 #define WIND_IRQ_MASK GPIO_IRQ_EDGE_FALL
 // #define WIND_PIN_PULL_UP
 
-bool rtc_alarm = false;
-
-/* Critical sections */
-static critical_section_t rtc_crit_sec;
-
 /* timers */
 struct repeating_timer hb_blink_timer;
 
@@ -99,10 +94,6 @@ static void signal_startup_with_leds(PicoLed::PicoLedController ledStrip)
 
 static void rtc_alarm_callback(void)
 {
-  critical_section_enter_blocking(&rtc_crit_sec);
-  rtc_alarm = true;
-  critical_section_exit(&rtc_crit_sec);
-
   rain_rtc_timer_cb();
 }
 
@@ -181,9 +172,6 @@ int main()
 
   auto ledStrip = PicoLed::addLeds<PicoLed::WS2812B>(pio0, 0, LED_PIN, LED_LENGTH, PicoLed::FORMAT_GRB);
   signal_startup_with_leds(ledStrip);
-
-  /* Critical sections */
-  critical_section_init(&rtc_crit_sec);
 
   /* init gpios */
   init_gpios();
