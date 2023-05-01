@@ -99,7 +99,9 @@ static int64_t secondary_rain_rate_timer(alarm_id_t id, void *user_data)
 {
   rain_rate = compute_rate(time_us_64(), rate_last_tip_usec);
 
-  return secondary_rate_alarm_next_msec; // reschedule
+  // reschedule for same amount. funnily while the alarm interval
+  // in expressed in msec when you add it, the return val is in usec.
+  return secondary_rate_alarm_next_msec * 1000;
 }
 
 static void rain_compute_new_rate()
